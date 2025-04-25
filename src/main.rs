@@ -62,6 +62,12 @@ fn main() {
 fn blackout_pdf(args: &Args) -> anyhow::Result<()> {
     let pdfium = Pdfium::new(
         Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./"))
+            .or_else(|_| {
+                Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("../"))
+            })
+            .or_else(|_| {
+                Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("../../"))
+            })
             .or_else(|_| Pdfium::bind_to_system_library())?,
     );
     let render_config = PdfRenderConfig::new()
