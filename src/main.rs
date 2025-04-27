@@ -69,6 +69,7 @@ fn main() {
                     && p.extension()
                         .is_some_and(|ext| ext.to_ascii_lowercase() == "pdf")
             })
+            .sorted()
             .collect_vec()
     };
 
