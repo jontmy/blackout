@@ -16,6 +16,8 @@ struct Args {
     password: Option<String>,
     #[arg(short, long)]
     filter_prefix: Option<String>,
+    #[arg(short, long)]
+    threshold: Option<u8>,
 }
 
 fn main() {
@@ -89,7 +91,12 @@ fn main() {
         let err_count = input_paths
             .into_iter()
             .map(|input_path| {
-                blackout_pdf(&[input_path], &args.output_path, args.password.as_deref())
+                blackout_pdf(
+                    &[input_path],
+                    &args.output_path,
+                    args.password.as_deref(),
+                    args.threshold,
+                )
             })
             .filter_map(Result::err)
             .inspect(|err| eprintln!("{err}"))
@@ -102,7 +109,12 @@ fn main() {
     }
 
     // Concatenate all input files if the output is a file
-    if let Err(e) = blackout_pdf(&input_paths, &args.output_path, args.password.as_deref()) {
+    if let Err(e) = blackout_pdf(
+        &input_paths,
+        &args.output_path,
+        args.password.as_deref(),
+        args.threshold,
+    ) {
         eprintln!("{e}");
         std::process::exit(1);
     }
@@ -112,6 +124,7 @@ fn blackout_pdf(
     input_paths: &[PathBuf],
     output_path: &PathBuf,
     password: Option<&str>,
+    threshold: Option<u8>,
 ) -> anyhow::Result<()> {
     let pdfium = Pdfium::new(
         Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path("./"))
@@ -147,8 +160,9 @@ fn blackout_pdf(
 
             let mut output_img = image::RgbImage::new(input_img.width(), input_img.height());
             for (x, y, pixel) in input_img.enumerate_pixels() {
-                if pixel[0] == 255 && pixel[1] == 255 && pixel[2] == 255 {
-                    output_img.put_pixel(x, y, *pixel);
+                let threshold = threshold.unwrap_or(255);
+                if pixel[0] >= threshold && pixel[1] >= threshold && pixel[2] >= threshold {
+                    output_img.put_pixel(x, y, image::Rgb([255, 255, 255]));
                 } else {
                     output_img.put_pixel(x, y, image::Rgb([0, 0, 0]));
                 }
